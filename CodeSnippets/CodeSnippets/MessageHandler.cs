@@ -54,5 +54,60 @@ namespace CodeSnippets
                 && req.RequestUri == new Uri($"https://saintgobaindsigroupe4--pltqa.sandbox.testtesttest.salesforce.com/services/Soap/c/55.0/00D1/00511ZZZ")),
                 ItExpr.IsAny<CancellationToken>());
         }
+        private void MockSeveralContentAndVerify()
+        {
+            //Mock httpClient
+            //Get posted content
+            var MockHttpMessageHandler = new Mock<HttpMessageHandler>();
+
+            string ActualHttpRequestContent = "";
+            string ActualHttpRequestContent2 = "";
+
+            HttpRequestMessage ActualHttpRequestMessage = null;
+            HttpRequestMessage ActualHttpRequestMessage2 = null;
+
+            MockHttpMessageHandler
+            .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>(
+                    (httpRequestMessage, cancellationToken) =>
+                    {
+                        if (string.IsNullOrEmpty(ActualHttpRequestContent))
+                        {
+                            ActualHttpRequestContent = httpRequestMessage.Content
+                            .ReadAsStringAsync()
+                            .GetAwaiter()
+                            .GetResult();
+                            ActualHttpRequestMessage = httpRequestMessage;
+                        }
+
+                        else if (string.IsNullOrEmpty(ActualHttpRequestContent2))
+                        {
+                            ActualHttpRequestContent2 = httpRequestMessage.Content
+                            .ReadAsStringAsync()
+                            .GetAwaiter()
+                            .GetResult();
+                            ActualHttpRequestMessage2 = httpRequestMessage;
+                        }
+                    })
+                .Returns(
+                Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(string.Empty)
+                }));
+
+            var httpClient = new HttpClient(MockHttpMessageHandler.Object);
+
+
+            //Verify httpClient
+            MockHttpMessageHandler.Protected().Verify("SendAsync", Times.Exactly(1),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Post
+                && req.RequestUri == new Uri($"https://saintgobaindsigroupe4--pltqa.sandbox.testtesttest.salesforce.com/services/Soap/c/55.0/00D1/00511ZZZ")),
+                ItExpr.IsAny<CancellationToken>());
+        }
     }
 }
